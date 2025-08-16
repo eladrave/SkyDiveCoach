@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/use-auth";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
+import SessionManagement from "@/pages/session-management";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/sessions" component={SessionManagement} />
       <Route component={NotFound} />
     </Switch>
   );

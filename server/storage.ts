@@ -81,6 +81,7 @@ export interface IStorage {
 
   // Badge operations
   getBadges(): Promise<Badge[]>;
+  createBadge(badge: Omit<Badge, 'id'>): Promise<Badge>;
   getAwardsByMenteeId(menteeId: string): Promise<Award[]>;
 
   // Jump log operations
@@ -320,6 +321,11 @@ export class DatabaseStorage implements IStorage {
 
   async getBadges(): Promise<Badge[]> {
     return await db.select().from(schema.badges);
+  }
+
+  async createBadge(badge: Omit<Badge, 'id'>): Promise<Badge> {
+    const result = await db.insert(schema.badges).values(badge).returning();
+    return result[0];
   }
 
   async getAwardsByMenteeId(menteeId: string): Promise<Award[]> {

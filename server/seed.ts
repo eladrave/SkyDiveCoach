@@ -72,6 +72,10 @@ export async function seedDatabase() {
     console.log("- Mentee: mentee@test.com / password123");
     console.log("- Admin: admin@test.com / password123");
 
+    // Create sample data
+    const { createSampleData } = await import("./sample-data");
+    await createSampleData();
+
   } catch (error) {
     console.error("Error seeding database:", error);
     throw error;

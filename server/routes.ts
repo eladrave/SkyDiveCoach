@@ -266,6 +266,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Session block routes
+  app.post("/api/session-blocks", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      const sessionBlock = await storage.createSessionBlock(req.body);
+      res.json(sessionBlock);
+    } catch (error) {
+      console.error("Create session block error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/session-blocks", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const startDate = req.query.startDate as string || new Date().toISOString().split('T')[0];
+      const endDate = req.query.endDate as string || startDate;
+      const sessionBlocks = await storage.getSessionBlocksByDateRange(startDate, endDate);
+      res.json(sessionBlocks);
+    } catch (error) {
+      console.error("Get session blocks error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/assignments", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      let assignments;
+      
+      if (req.user!.role === 'mentor') {
+        assignments = await storage.getAssignmentsByMentorId(userId);
+      } else if (req.user!.role === 'mentee') {
+        assignments = await storage.getAssignmentsByMenteeId(userId);
+      } else {
+        assignments = await storage.getAssignmentsWithDetails();
+      }
+      
+      res.json(assignments);
+    } catch (error) {
+      console.error("Get assignments error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/assignments/:id/status", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      const assignment = await storage.updateAssignmentStatus(req.params.id, req.body.status);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error) {
+      console.error("Update assignment error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Assignment routes
   app.get("/api/assignments", authenticateToken, async (req, res) => {
     try {
@@ -365,14 +421,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const mentorId = req.user!.id;
       
+      // Get pending assignments
+      const pendingAssignments = await storage.getAssignmentsByMentorId(mentorId);
+      
+      // Get upcoming sessions (placeholder for now)
+      const upcomingSessions = [];
+      
       const dashboardData = {
-        pendingAssignments: [],
-        upcomingSessions: [],
+        pendingAssignments: pendingAssignments.filter(a => a.status === 'pending'),
+        upcomingSessions,
         stats: {
-          activeMentees: 0,
-          completedSessions: 0,
+          activeMentees: pendingAssignments.length,
+          completedSessions: pendingAssignments.filter(a => a.status === 'confirmed').length,
           avgRating: 4.8,
-          totalHours: 0
+          totalHours: pendingAssignments.length * 2
         }
       };
       
@@ -387,14 +449,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const menteeId = req.user!.id;
       
+      // Get mentee's assignments
+      const assignments = await storage.getAssignmentsByMenteeId(menteeId);
+      const upcomingSessions = assignments.filter(a => a.status === 'confirmed');
+      
+      // Get progression steps
+      const allSteps = await storage.getProgressionSteps();
+      const completedSteps = await storage.getStepCompletionsByMenteeId(menteeId);
+      
       const dashboardData = {
-        upcomingSessions: [],
+        upcomingSessions,
         progression: {
-          completedSteps: 0,
-          totalSteps: 0,
-          progress: 0
+          completedSteps: completedSteps.length,
+          totalSteps: allSteps.length,
+          progress: allSteps.length > 0 ? Math.round((completedSteps.length / allSteps.length) * 100) : 0
         },
-        awards: []
+        awards: [] // Placeholder for now
       };
       
       res.json(dashboardData);
