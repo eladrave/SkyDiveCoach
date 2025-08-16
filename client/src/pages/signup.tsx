@@ -139,6 +139,7 @@ export default function Signup() {
                         <FormControl>
                           <Input
                             {...field}
+                            value={field.value || ''}
                             placeholder="(555) 123-4567"
                             data-testid="input-phone"
                           />
@@ -157,6 +158,7 @@ export default function Signup() {
                         <FormControl>
                           <Input
                             {...field}
+                            value={field.value || ''}
                             placeholder="A-12345"
                             data-testid="input-license"
                           />
@@ -178,6 +180,7 @@ export default function Signup() {
                           {...field}
                           type="number"
                           min="0"
+                          value={field.value || ''}
                           onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
                           data-testid="input-jumps"
                         />

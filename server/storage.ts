@@ -201,7 +201,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAvailability(id: string): Promise<boolean> {
     const result = await db.delete(schema.availability).where(eq(schema.availability.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async createSessionBlock(sessionBlock: InsertSessionBlock): Promise<SessionBlock> {
@@ -258,7 +258,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAssignmentsWithDetails(sessionBlockId?: string): Promise<any[]> {
-    let query = db
+    let baseQuery = db
       .select({
         assignment: schema.assignments,
         mentor: schema.users,
@@ -271,10 +271,10 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(schema.sessionBlocks, eq(schema.assignments.sessionBlockId, schema.sessionBlocks.id));
 
     if (sessionBlockId) {
-      query = query.where(eq(schema.assignments.sessionBlockId, sessionBlockId));
+      return await baseQuery.where(eq(schema.assignments.sessionBlockId, sessionBlockId));
     }
 
-    return await query;
+    return await baseQuery;
   }
 
   async createAttendanceRequest(request: InsertAttendanceRequest): Promise<AttendanceRequest> {
