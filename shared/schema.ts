@@ -60,6 +60,7 @@ export const availability = pgTable("availability", {
 // Session blocks table
 export const sessionBlocks = pgTable("session_blocks", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  mentorId: uuid("mentor_id").references(() => mentors.id).notNull(),
   date: date("date").notNull(),
   startTime: time("start_time").notNull(),
   endTime: time("end_time").notNull(),

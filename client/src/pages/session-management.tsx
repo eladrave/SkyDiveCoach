@@ -47,6 +47,13 @@ export default function SessionManagement() {
 
   const { data: sessionBlocks = [] } = useQuery({
     queryKey: ['/api/session-blocks', selectedDate],
+    queryFn: async () => {
+      const response = await fetch(`/api/session-blocks?startDate=${selectedDate}&endDate=${selectedDate}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch session blocks');
+      return response.json();
+    },
     enabled: !!user,
   });
 
@@ -72,6 +79,19 @@ export default function SessionManagement() {
       toast({
         title: "Session created",
         description: "New session block has been created successfully.",
+      });
+    },
+  });
+
+  const deleteSessionBlockMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      return await apiRequest('DELETE', `/api/session-blocks/${sessionId}`, null);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/session-blocks'] });
+      toast({
+        title: "Session deleted",
+        description: "Session block has been deleted successfully.",
       });
     },
   });
@@ -158,6 +178,54 @@ export default function SessionManagement() {
           <p><strong>Step 4:</strong> Accept or decline requests - accepted sessions become confirmed training</p>
         </div>
       </div>
+
+      {/* My Session Blocks - Only for mentors */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            My Created Session Blocks
+          </CardTitle>
+          <CardDescription>
+            Session blocks you've created for {selectedDate}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {sessionBlocks.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No session blocks created for this date</p>
+                <p className="text-sm mt-2">Use "Create Session Block" below to add availability</p>
+              </div>
+            ) : (
+              sessionBlocks.map((block: any) => (
+                <div key={block.id} className="border rounded-lg p-4 flex items-center justify-between" data-testid={`session-block-${block.id}`}>
+                  <div>
+                    <p className="font-medium">
+                      {block.startTime} - {block.endTime}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Date: {block.date} | Capacity: {block.blockCapacityHint || 8}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => deleteSessionBlockMutation.mutate(block.id)}
+                      disabled={deleteSessionBlockMutation.isPending}
+                      data-testid={`button-delete-session-${block.id}`}
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Assignments */}

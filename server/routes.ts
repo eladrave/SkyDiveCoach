@@ -271,14 +271,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Also create an assignment for the mentor to see
-      // For now, we'll use the first available mentor - in a real system this would be based on session ownership
+      // Get the session block to find the mentor
       try {
-        const mentorsWithUsers = await storage.getMentorsWithUsers();
-        if (mentorsWithUsers.length > 0) {
+        const sessionBlock = await storage.getSessionBlockById(req.body.session_block_id);
+        if (sessionBlock && sessionBlock.mentorId) {
           await storage.createAssignment({
             sessionBlockId: req.body.session_block_id,
             menteeId: menteeData.id,
-            mentorId: mentorsWithUsers[0].id,
+            mentorId: sessionBlock.mentorId,
             status: "pending",
           });
         }
@@ -310,6 +310,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/session-blocks/:id", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      // Check if the session block belongs to the mentor
+      const sessionBlock = await storage.getSessionBlockById(req.params.id);
+      if (!sessionBlock) {
+        return res.status(404).json({ message: "Session block not found" });
+      }
+      
+      if (req.user!.role === 'mentor' && sessionBlock.mentorId !== req.user!.id) {
+        return res.status(403).json({ message: "You can only delete your own session blocks" });
+      }
+      
+      // Delete any related assignments and attendance requests first
+      await storage.deleteSessionBlockRelatedData(req.params.id);
+      await storage.deleteSessionBlock(req.params.id);
+      
+      res.json({ message: "Session block deleted successfully" });
+    } catch (error) {
+      console.error("Delete session block error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/session-blocks", authenticateToken, async (req: AuthRequest, res) => {
     try {
       const startDate = req.query.startDate as string || new Date().toISOString().split('T')[0];
@@ -333,13 +356,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const mentorsWithUsers = await storage.getMentorsWithUsers();
           const sessionBlocksWithMentors = sessionBlocks.map((block) => {
-            // Find the mentor for this specific block or use first available
-            const mentor = mentorsWithUsers.find(m => m.id === block.mentorId) || 
-                          (mentorsWithUsers.length > 0 ? mentorsWithUsers[0] : null);
+            // Find the mentor for this specific block
+            const mentor = mentorsWithUsers.find(m => m.id === block.mentorId);
             return {
               ...block,
-              mentorName: mentor?.user?.email || "Available Mentor",
-              mentorId: mentor?.id || null,
+              mentorName: mentor?.user?.email || "Unknown Mentor",
+              mentorId: block.mentorId,
             };
           });
           res.json(sessionBlocksWithMentors);

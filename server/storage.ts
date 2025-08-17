@@ -61,6 +61,8 @@ export interface IStorage {
   getSessionBlocksByDateRange(startDate: string, endDate: string): Promise<SessionBlock[]>;
   getSessionBlocksByMentorAndDate(mentorId: string, startDate: string, endDate: string): Promise<SessionBlock[]>;
   getSessionBlockById(id: string): Promise<SessionBlock | undefined>;
+  deleteSessionBlock(id: string): Promise<boolean>;
+  deleteSessionBlockRelatedData(sessionBlockId: string): Promise<void>;
 
   // Assignment operations
   createAssignment(assignment: InsertAssignment): Promise<Assignment>;
@@ -241,6 +243,18 @@ export class DatabaseStorage implements IStorage {
   async getSessionBlockById(id: string): Promise<SessionBlock | undefined> {
     const result = await db.select().from(schema.sessionBlocks).where(eq(schema.sessionBlocks.id, id)).limit(1);
     return result[0];
+  }
+
+  async deleteSessionBlock(id: string): Promise<boolean> {
+    const result = await db.delete(schema.sessionBlocks).where(eq(schema.sessionBlocks.id, id));
+    return true;
+  }
+
+  async deleteSessionBlockRelatedData(sessionBlockId: string): Promise<void> {
+    // Delete related assignments
+    await db.delete(schema.assignments).where(eq(schema.assignments.sessionBlockId, sessionBlockId));
+    // Delete related attendance requests
+    await db.delete(schema.attendanceRequests).where(eq(schema.attendanceRequests.sessionBlockId, sessionBlockId));
   }
 
   async createAssignment(assignment: InsertAssignment): Promise<Assignment> {
