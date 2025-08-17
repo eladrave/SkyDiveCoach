@@ -2,6 +2,12 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   Home, 
   Calendar, 
@@ -10,7 +16,10 @@ import {
   Trophy,
   BookOpen,
   BarChart3,
-  LogOut
+  LogOut,
+  GraduationCap,
+  UserCheck,
+  Shield
 } from "lucide-react";
 
 export default function Navigation() {
@@ -73,6 +82,31 @@ export default function Navigation() {
                   <span className="text-white font-bold text-lg">S</span>
                 </div>
                 <span className="font-bold text-xl text-gray-900">SkyMentor</span>
+                {/* Role indicator icon with tooltip */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="ml-2 flex items-center p-1.5 rounded-md bg-gray-50 border border-gray-200">
+                        {user.role === 'mentee' && (
+                          <GraduationCap className="h-4 w-4 text-blue-600" />
+                        )}
+                        {user.role === 'mentor' && (
+                          <UserCheck className="h-4 w-4 text-green-600" />
+                        )}
+                        {user.role === 'admin' && (
+                          <Shield className="h-4 w-4 text-purple-600" />
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-medium">
+                        {user.role === 'mentee' && 'Mentee Account'}
+                        {user.role === 'mentor' && 'Mentor Account'}
+                        {user.role === 'admin' && 'Administrator Account'}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
             
