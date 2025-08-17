@@ -19,9 +19,20 @@ import {
   BookOpen,
   Target,
   Star,
-  Upload
+  Upload,
+  UserCheck,
+  FileSignature
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface ProgressionStep {
   id: string;
@@ -63,6 +74,10 @@ export default function Progression() {
   const [, setLocation] = useLocation();
   const [selectedMenteeId, setSelectedMenteeId] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [signOffDialogOpen, setSignOffDialogOpen] = useState(false);
+  const [selectedStep, setSelectedStep] = useState<ProgressionStep | null>(null);
+  const [signOffNotes, setSignOffNotes] = useState("");
+  const [evidenceUrl, setEvidenceUrl] = useState("");
 
   useEffect(() => {
     if (!authLoading && (!user || !['mentee', 'mentor', 'admin'].includes(user.role))) {
@@ -143,10 +158,29 @@ export default function Progression() {
     ? (completions.length / progressionSteps.length) * 100 
     : 0;
 
-  const handleCompleteStep = (stepId: string, notes: string) => {
+  const handleCompleteStep = (stepId: string, notes: string, evidenceUrl?: string) => {
     const menteeId = user?.role === 'mentor' ? selectedMenteeId : user?.id;
-    if (!menteeId) return;
-    completeStepMutation.mutate({ stepId, menteeId, notes });
+    if (!menteeId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: user?.role === 'mentor' ? "Please select a mentee first" : "User ID not found",
+      });
+      return;
+    }
+    completeStepMutation.mutate({ 
+      stepId, 
+      menteeId, 
+      notes, 
+      evidenceUrl 
+    }, {
+      onSuccess: () => {
+        setSignOffDialogOpen(false);
+        setSignOffNotes("");
+        setEvidenceUrl("");
+        setSelectedStep(null);
+      }
+    });
   };
 
   return (
@@ -295,32 +329,112 @@ export default function Progression() {
                             {new Date(completion?.completedAt || '').toLocaleDateString()}
                           </span>
                         </div>
-                        {completion?.notes && (
-                          <p className="text-xs text-gray-600 italic">
-                            Notes: {completion.notes}
-                          </p>
-                        )}
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-2 space-y-1">
+                          <div className="flex items-center gap-1 text-xs text-green-700">
+                            <UserCheck className="h-3 w-3" />
+                            <span className="font-medium">Mentor Sign-off</span>
+                          </div>
+                          {completion?.notes && (
+                            <p className="text-xs text-gray-600 italic">
+                              "{completion.notes}"
+                            </p>
+                          )}
+                          {completion?.evidenceUrl && (
+                            <a 
+                              href={completion.evidenceUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              <Upload className="h-3 w-3" />
+                              View Evidence
+                            </a>
+                          )}
+                        </div>
                       </div>
-                    ) : user.role === 'mentor' && (
-                      <div className="space-y-3">
-                        <Textarea
-                          placeholder="Add completion notes..."
-                          id={`notes-${step.id}`}
-                          className="text-sm"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const notes = (document.getElementById(`notes-${step.id}`) as HTMLTextAreaElement)?.value || '';
-                            handleCompleteStep(step.id, notes);
-                          }}
-                          disabled={completeStepMutation.isPending}
-                          data-testid={`button-complete-${step.id}`}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Mark Complete
-                        </Button>
-                      </div>
+                    ) : user.role === 'mentor' && selectedMenteeId && (
+                      <Dialog open={signOffDialogOpen && selectedStep?.id === step.id} onOpenChange={(open) => {
+                        if (!open) {
+                          setSignOffDialogOpen(false);
+                          setSelectedStep(null);
+                          setSignOffNotes("");
+                          setEvidenceUrl("");
+                        }
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedStep(step);
+                              setSignOffDialogOpen(true);
+                            }}
+                            data-testid={`button-signoff-${step.id}`}
+                          >
+                            <FileSignature className="h-4 w-4 mr-1" />
+                            Sign Off Completion
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[500px]">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                              <UserCheck className="h-5 w-5 text-green-600" />
+                              Mentor Sign-Off
+                            </DialogTitle>
+                            <DialogDescription>
+                              Confirm that the mentee has successfully completed "{step.title}". Your signature verifies their achievement.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="signoff-notes">Completion Notes (Required)</Label>
+                              <Textarea
+                                id="signoff-notes"
+                                value={signOffNotes}
+                                onChange={(e) => setSignOffNotes(e.target.value)}
+                                placeholder="Describe how the mentee demonstrated this skill..."
+                                className="h-24"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="evidence-url">Evidence/Video URL (Optional)</Label>
+                              <Input
+                                id="evidence-url"
+                                type="url"
+                                value={evidenceUrl}
+                                onChange={(e) => setEvidenceUrl(e.target.value)}
+                                placeholder="https://example.com/jump-video"
+                              />
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                              <p className="font-medium text-blue-900">Mentor Certification</p>
+                              <p className="text-blue-700 mt-1">
+                                By signing off, you certify that the mentee has demonstrated competency in this skill under your supervision.
+                              </p>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setSignOffDialogOpen(false);
+                                setSelectedStep(null);
+                                setSignOffNotes("");
+                                setEvidenceUrl("");
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={() => handleCompleteStep(step.id, signOffNotes, evidenceUrl)}
+                              disabled={!signOffNotes.trim() || completeStepMutation.isPending}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Confirm & Sign Off
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     )}
                   </CardContent>
                 </Card>
