@@ -52,10 +52,7 @@ export default function SessionManagement() {
 
   const updateAssignmentMutation = useMutation({
     mutationFn: async ({ assignmentId, status }: { assignmentId: string; status: string }) => {
-      return await apiRequest(`/api/assignments/${assignmentId}/status`, {
-        method: 'PATCH',
-        body: { status },
-      });
+      return await apiRequest('PUT', `/api/assignments/${assignmentId}/status`, { status });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assignments'] });
@@ -68,16 +65,33 @@ export default function SessionManagement() {
 
   const createSessionBlockMutation = useMutation({
     mutationFn: async (sessionData: { date: string; startTime: string; endTime: string }) => {
-      return await apiRequest('/api/session-blocks', {
-        method: 'POST',
-        body: sessionData,
-      });
+      return await apiRequest('POST', '/api/session-blocks', sessionData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/session-blocks'] });
       toast({
         title: "Session created",
         description: "New session block has been created successfully.",
+      });
+    },
+  });
+
+  const updateAvailabilityMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest('POST', `/api/availability`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/availability'] });
+      toast({
+        title: "Success",
+        description: "Availability updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to update availability",
+        variant: "destructive",
       });
     },
   });
@@ -122,9 +136,15 @@ export default function SessionManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Session Management</h1>
           <p className="text-gray-600 mt-1">Manage your training sessions and assignments</p>
         </div>
-        <Button onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}>
+        <Button 
+          onClick={() => updateAvailabilityMutation.mutate({ 
+            dayOfWeek: new Date().getDay(),
+            startTime: '09:00',
+            endTime: '17:00' 
+          })}
+          data-testid="button-update-availability">
           <Calendar className="h-4 w-4 mr-2" />
-          Today
+          Update Availability
         </Button>
       </div>
 

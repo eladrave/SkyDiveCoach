@@ -551,6 +551,27 @@ export class DatabaseStorage implements IStorage {
       .from(schema.mentees)
       .leftJoin(schema.users, eq(schema.mentees.userId, schema.users.id));
   }
+
+  // Add missing availability methods
+  async createAvailability(availability: Omit<Availability, 'id'>): Promise<Availability> {
+    const result = await db.insert(schema.availability).values(availability).returning();
+    return result[0];
+  }
+
+  async updateAvailability(id: string, updates: Partial<Availability>): Promise<Availability> {
+    const result = await db.update(schema.availability).set(updates).where(eq(schema.availability.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteAvailability(id: string): Promise<void> {
+    await db.delete(schema.availability).where(eq(schema.availability.id, id));
+  }
+
+  // Add missing assignment update method
+  async updateAssignment(id: string, updates: Partial<Assignment>): Promise<Assignment> {
+    const result = await db.update(schema.assignments).set(updates).where(eq(schema.assignments.id, id)).returning();
+    return result[0];
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -13,7 +13,7 @@ interface AuthRequest extends Express.Request {
 
 // Middleware to verify JWT token
 const authenticateToken = async (req: any, res: any, next: any) => {
-  const token = req.cookies?.token;
+  const token = req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
 
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });
@@ -30,6 +30,7 @@ const authenticateToken = async (req: any, res: any, next: any) => {
     req.user = user;
     next();
   } catch (error) {
+    console.error("Auth error:", error);
     return res.status(401).json({ message: "Invalid token" });
   }
 };
@@ -585,6 +586,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(mentees);
     } catch (error) {
       console.error("Get mentees error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Availability routes - Add these missing routes
+  app.post("/api/availability", authenticateToken, requireRole(["mentor"]), async (req: AuthRequest, res) => {
+    try {
+      const mentorData = await storage.getMentorById(req.user!.id);
+      if (!mentorData) {
+        return res.status(400).json({ message: "Mentor profile not found" });
+      }
+
+      const availability = await storage.createAvailability({
+        ...req.body,
+        mentorId: mentorData.id,
+      });
+      res.json(availability);
+    } catch (error) {
+      console.error("Create availability error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/availability/:id", authenticateToken, requireRole(["mentor"]), async (req: AuthRequest, res) => {
+    try {
+      const availability = await storage.updateAvailability(req.params.id, req.body);
+      res.json(availability);
+    } catch (error) {
+      console.error("Update availability error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/availability/:id", authenticateToken, requireRole(["mentor"]), async (req: AuthRequest, res) => {
+    try {
+      await storage.deleteAvailability(req.params.id);
+      res.json({ message: "Availability deleted successfully" });
+    } catch (error) {
+      console.error("Delete availability error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Assignment update routes - Add these missing routes 
+  app.put("/api/assignments/:id", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      const assignment = await storage.updateAssignment(req.params.id, req.body);
+      res.json(assignment);
+    } catch (error) {
+      console.error("Update assignment error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/assignments/:id/status", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      const { status } = req.body;
+      const assignment = await storage.updateAssignment(req.params.id, { status });
+      res.json(assignment);
+    } catch (error) {
+      console.error("Update assignment status error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
