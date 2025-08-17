@@ -45,7 +45,7 @@ export default function SessionManagement() {
     }
   }, [user, authLoading, setLocation]);
 
-  const { data: assignments = [], isLoading } = useQuery({
+  const { data: assignments = [], isLoading } = useQuery<Assignment[]>({
     queryKey: ['/api/assignments', user?.id],
     enabled: !!user,
   });
@@ -254,7 +254,7 @@ export default function SessionManagement() {
                   </div>
                 </div>
               ) : (
-                assignments.map((assignment: Assignment) => (
+                assignments.map((assignment) => (
                   <div key={assignment.id} className="border rounded-lg p-4 space-y-3" data-testid={`assignment-${assignment.id}`}>
                     <div className="flex items-center justify-between">
                       <div>
@@ -382,15 +382,7 @@ export default function SessionManagement() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">Available</Badge>
-                      {user.role === "mentee" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleRequestSession(session.id)}
-                          data-testid={`button-request-${session.id}`}
-                        >
-                          Request Session
-                        </Button>
-                      )}
+
                     </div>
                   </div>
                 </div>
