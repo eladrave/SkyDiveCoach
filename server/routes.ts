@@ -485,24 +485,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes
-  app.get("/api/dashboard/mentor", authenticateToken, requireRole(["mentor"]), async (req: AuthRequest, res) => {
+  app.get("/api/dashboard/mentor/:id", authenticateToken, requireRole(["mentor"]), async (req: AuthRequest, res) => {
     try {
-      const mentorId = req.user!.id;
+      const mentorId = req.params.id;
       
-      // Get pending assignments
-      const pendingAssignments = await storage.getAssignmentsByMentorId(mentorId);
+      // Verify the mentor is requesting their own dashboard
+      if (req.user!.id !== mentorId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       
-      // Get upcoming sessions (placeholder for now)
-      const upcomingSessions = [];
+      // Get pending assignments with session and mentee details
+      const assignments = await storage.getAssignmentsWithDetailsByMentorId(mentorId);
+      const pendingAssignments = assignments.filter(a => a.assignment.status === 'pending');
+      
+      // Get upcoming sessions (confirmed assignments)
+      const upcomingSessions = assignments.filter(a => a.assignment.status === 'confirmed');
       
       const dashboardData = {
-        pendingAssignments: pendingAssignments.filter(a => a.status === 'pending'),
+        pendingAssignments,
         upcomingSessions,
         stats: {
           activeMentees: pendingAssignments.length,
-          completedSessions: pendingAssignments.filter(a => a.status === 'confirmed').length,
+          completedSessions: assignments.filter(a => a.assignment.status === 'confirmed').length,
           avgRating: 4.8,
-          totalHours: pendingAssignments.length * 2
+          totalHours: assignments.length * 2
         }
       };
       

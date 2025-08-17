@@ -70,6 +70,7 @@ export interface IStorage {
   getAssignmentsByMenteeId(menteeId: string): Promise<Assignment[]>;
   updateAssignmentStatus(id: string, status: "pending" | "confirmed" | "declined" | "cancelled"): Promise<Assignment | undefined>;
   getAssignmentsWithDetails(sessionBlockId?: string): Promise<any[]>;
+  getAssignmentsWithDetailsByMentorId(mentorId: string): Promise<any[]>;
 
   // Attendance operations
   createAttendanceRequest(request: InsertAttendanceRequest): Promise<AttendanceRequest>;
@@ -292,12 +293,14 @@ export class DatabaseStorage implements IStorage {
       .select({
         assignment: schema.assignments,
         mentor: schema.users,
-        mentee: schema.users,
+        mentee: {
+          id: schema.users.id,
+          email: schema.users.email,
+        },
         sessionBlock: schema.sessionBlocks,
       })
       .from(schema.assignments)
-      .leftJoin(schema.users, eq(schema.assignments.mentorId, schema.users.id))
-      .leftJoin(schema.mentees, eq(schema.assignments.menteeId, schema.mentees.id))
+      .innerJoin(schema.users, eq(schema.assignments.menteeId, schema.users.id))
       .leftJoin(schema.sessionBlocks, eq(schema.assignments.sessionBlockId, schema.sessionBlocks.id));
 
     if (sessionBlockId) {
@@ -305,6 +308,23 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await baseQuery;
+  }
+
+  async getAssignmentsWithDetailsByMentorId(mentorId: string): Promise<any[]> {
+    return await db
+      .select({
+        assignment: schema.assignments,
+        mentee: {
+          id: schema.users.id,
+          email: schema.users.email,
+        },
+        sessionBlock: schema.sessionBlocks,
+      })
+      .from(schema.assignments)
+      .innerJoin(schema.users, eq(schema.assignments.menteeId, schema.users.id))
+      .leftJoin(schema.sessionBlocks, eq(schema.assignments.sessionBlockId, schema.sessionBlocks.id))
+      .where(eq(schema.assignments.mentorId, mentorId))
+      .orderBy(desc(schema.assignments.createdAt));
   }
 
   async createAttendanceRequest(request: InsertAttendanceRequest): Promise<AttendanceRequest> {

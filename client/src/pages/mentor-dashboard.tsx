@@ -9,6 +9,13 @@ export default function MentorDashboard() {
 
   const { data: dashboardData, isLoading } = useQuery({
     queryKey: ["/api/dashboard/mentor", user?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/dashboard/mentor/${user?.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch dashboard');
+      return response.json();
+    },
     enabled: !!user?.id,
   });
 
