@@ -58,7 +58,10 @@ export interface IStorage {
 
   // Session operations
   createSessionBlock(sessionBlock: InsertSessionBlock): Promise<SessionBlock>;
+  updateSessionBlock(id: string, sessionBlock: Partial<InsertSessionBlock>): Promise<SessionBlock | undefined>;
+  getSessionBlocksByDate(date: string): Promise<SessionBlock[]>;
   getSessionBlocksByDateRange(startDate: string, endDate: string): Promise<SessionBlock[]>;
+  getSessionBlocksByMonth(year: number, month: number): Promise<SessionBlock[]>;
   getSessionBlocksByMentorAndDate(mentorId: string, startDate: string, endDate: string): Promise<SessionBlock[]>;
   getSessionBlockById(id: string): Promise<SessionBlock | undefined>;
   deleteSessionBlock(id: string): Promise<boolean>;
@@ -96,9 +99,16 @@ export interface IStorage {
   getMentorDashboardData(mentorId: string): Promise<any>;
   getMenteeDashboardData(menteeId: string): Promise<any>;
   getAdminDashboardData(): Promise<any>;
+
+  // Exercise operations
+  getAllExercises(): Promise<Exercise[]>;
 }
 
 export class DatabaseStorage implements IStorage {
+  async getAllExercises(): Promise<Exercise[]> {
+    return await db.select().from(schema.exercises);
+  }
+
   async getUserById(id: string): Promise<User | undefined> {
     const result = await db.select().from(schema.users).where(eq(schema.users.id, id)).limit(1);
     return result[0];
@@ -214,7 +224,30 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getSessionBlocksByDateRange(startDate: string, endDate: string): Promise<SessionBlock[]> {
+  async getSessionBlocksByMonth(year: number, month: number): Promise<SessionBlock[]> {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0);
+    return await db
+      .select()
+      .from(schema.sessionBlocks)
+      .where(
+        and(
+          gte(schema.sessionBlocks.date, startDate.toISOString().split('T')[0]),
+          lte(schema.sessionBlocks.date, endDate.toISOString().split('T')[0])
+        )
+      )
+      .orderBy(schema.sessionBlocks.date, schema.sessionBlocks.startTime);
+  }
+
+  async getSessionBlocksByDate(date: string): Promise<SessionBlock[]> {
+    return await db
+      .select()
+      .from(schema.sessionBlocks)
+      .where(eq(schema.sessionBlocks.date, date))
+      .orderBy(schema.sessionBlocks.startTime);
+  }
+
+  async getSessionBlocksByDateRange(startDate: string, endDate:string): Promise<SessionBlock[]> {
     return await db
       .select()
       .from(schema.sessionBlocks)
@@ -243,6 +276,11 @@ export class DatabaseStorage implements IStorage {
 
   async getSessionBlockById(id: string): Promise<SessionBlock | undefined> {
     const result = await db.select().from(schema.sessionBlocks).where(eq(schema.sessionBlocks.id, id)).limit(1);
+    return result[0];
+  }
+
+  async updateSessionBlock(id: string, sessionBlock: Partial<InsertSessionBlock>): Promise<SessionBlock | undefined> {
+    const result = await db.update(schema.sessionBlocks).set(sessionBlock).where(eq(schema.sessionBlocks.id, id)).returning();
     return result[0];
   }
 
@@ -303,11 +341,27 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(schema.users, eq(schema.assignments.menteeId, schema.users.id))
       .leftJoin(schema.sessionBlocks, eq(schema.assignments.sessionBlockId, schema.sessionBlocks.id));
 
+    let results;
     if (sessionBlockId) {
-      return await baseQuery.where(eq(schema.assignments.sessionBlockId, sessionBlockId));
+      results = await baseQuery.where(eq(schema.assignments.sessionBlockId, sessionBlockId));
+    } else {
+      results = await baseQuery;
     }
 
-    return await baseQuery;
+    return Promise.all(results.map(async (result) => {
+      const completions = await this.getStepCompletionsByMenteeId(result.mentee.id);
+      const awards = await this.getAwardsByMenteeId(result.mentee.id);
+      return {
+        ...result,
+        mentee: {
+          ...result.mentee,
+          progression: {
+            completedSteps: completions.length,
+          },
+          awards,
+        },
+      };
+    }));
   }
 
   async getAssignmentsWithDetailsByMentorId(mentorId: string): Promise<any[]> {

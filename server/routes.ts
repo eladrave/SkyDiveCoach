@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { suggestionService } from "./services/suggestionService";
 import jwt from "jsonwebtoken";
 import type { User } from "@shared/schema";
 import { loginSchema, signupSchema } from "@shared/schema";
@@ -205,6 +206,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/sessions/day/:date", authenticateToken, async (req, res) => {
+    try {
+      const sessionBlocks = await storage.getSessionBlocksByDate(req.params.date);
+      const sessionBlocksWithDetails = await Promise.all(sessionBlocks.map(async (block) => {
+        const assignments = await storage.getAssignmentsWithDetails(block.id);
+        const mentor = await storage.getMentorById(block.mentorId);
+        return {
+          ...block,
+          assignments,
+          mentor,
+        };
+      }));
+      res.json(sessionBlocksWithDetails);
+    } catch (error) {
+      console.error("Get sessions by day error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/sessions/materialize", authenticateToken, requireRole(["admin"]), async (req, res) => {
     try {
       const { from, to, template } = req.body;
@@ -310,6 +330,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/session-blocks/:id", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      const sessionBlock = await storage.getSessionBlockById(req.params.id);
+      if (!sessionBlock) {
+        return res.status(404).json({ message: "Session block not found" });
+      }
+      if (req.user!.role === 'mentor' && sessionBlock.mentorId !== req.user!.id) {
+        return res.status(403).json({ message: "You can only update your own session blocks" });
+      }
+      const updatedSessionBlock = await storage.updateSessionBlock(req.params.id, req.body);
+      res.json(updatedSessionBlock);
+    } catch (error) {
+      console.error("Update session block error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.delete("/api/session-blocks/:id", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
     try {
       // Check if the session block belongs to the mentor
@@ -340,15 +377,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let sessionBlocks;
       
-      // If user is a mentor, show only their session blocks
+      // If user is a mentor, show only their session blocks with assignments
       if (req.user!.role === 'mentor') {
         sessionBlocks = await storage.getSessionBlocksByMentorAndDate(req.user!.id, startDate, endDate);
-        // For mentor's own blocks, add their own info
-        res.json(sessionBlocks.map(block => ({
-          ...block,
-          mentorName: req.user!.email || "You",
-          mentorId: req.user!.id,
-        })));
+        const sessionBlocksWithAssignments = await Promise.all(sessionBlocks.map(async (block) => {
+          const assignments = await storage.getAssignmentsWithDetails(block.id);
+          const mentees = assignments.map(a => a.mentee);
+          const suggestedExercises = await suggestionService.suggestExercisesForMentees(mentees);
+          return {
+            ...block,
+            mentorName: req.user!.email || "You",
+            mentorId: req.user!.id,
+            assignments,
+            suggestedExercises,
+          };
+        }));
+        res.json(sessionBlocksWithAssignments);
       } else {
         // For mentees/admins, show all session blocks with mentor info
         sessionBlocks = await storage.getSessionBlocksByDateRange(startDate, endDate);
@@ -732,6 +776,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ assignments, date });
     } catch (error) {
       console.error("Get roster error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/calendar/availability", authenticateToken, async (req, res) => {
+    try {
+      const year = parseInt(req.query.year as string, 10);
+      const month = parseInt(req.query.month as string, 10);
+
+      if (isNaN(year) || isNaN(month)) {
+        return res.status(400).json({ message: "Invalid year or month" });
+      }
+
+      const sessionBlocks = await storage.getSessionBlocksByMonth(year, month);
+      const availabilityByDay: Record<string, { totalSlots: number; filledSlots: number }> = {};
+
+      for (const block of sessionBlocks) {
+        const assignments = await storage.getAssignmentsWithDetails(block.id);
+        const day = new Date(block.date!).getDate();
+        if (!availabilityByDay[day]) {
+          availabilityByDay[day] = { totalSlots: 0, filledSlots: 0 };
+        }
+        availabilityByDay[day].totalSlots += block.slots || 0;
+        availabilityByDay[day].filledSlots += assignments.filter(a => a.assignment.status === 'confirmed').length;
+      }
+
+      res.json(availabilityByDay);
+    } catch (error) {
+      console.error("Get calendar availability error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

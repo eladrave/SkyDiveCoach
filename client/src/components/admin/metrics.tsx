@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Settings, TrendingUp, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface UserCount {
   role: string;
@@ -19,6 +20,7 @@ interface AdminMetricsProps {
 }
 
 export default function AdminMetrics({ metrics, userCounts }: AdminMetricsProps) {
+  const [, setLocation] = useLocation();
   const defaultMetrics = {
     activeUsers: 0,
     weeklyJumps: 0,
@@ -87,6 +89,7 @@ export default function AdminMetrics({ metrics, userCounts }: AdminMetricsProps)
             variant="outline"
             className="w-full justify-start"
             data-testid="button-manage-users"
+            onClick={() => setLocation("/users")}
           >
             <Users className="mr-3 h-4 w-4" />
             Manage Users
@@ -95,6 +98,7 @@ export default function AdminMetrics({ metrics, userCounts }: AdminMetricsProps)
             variant="outline"
             className="w-full justify-start"
             data-testid="button-session-settings"
+            onClick={() => setLocation("/sessions")}
           >
             <Settings className="mr-3 h-4 w-4" />
             Session Settings
@@ -103,6 +107,7 @@ export default function AdminMetrics({ metrics, userCounts }: AdminMetricsProps)
             variant="outline"
             className="w-full justify-start"
             data-testid="button-progression-setup"
+            onClick={() => setLocation("/progression")}
           >
             <TrendingUp className="mr-3 h-4 w-4" />
             Progression Setup
@@ -111,6 +116,7 @@ export default function AdminMetrics({ metrics, userCounts }: AdminMetricsProps)
             variant="outline"
             className="w-full justify-start"
             data-testid="button-reports"
+            onClick={() => setLocation("/reports")}
           >
             <FileText className="mr-3 h-4 w-4" />
             Reports

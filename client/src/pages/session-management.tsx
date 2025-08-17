@@ -24,8 +24,9 @@ interface SessionBlock {
   id: string;
   date: string;
   startTime: string;
-  endTime: string;
+  endTime:string;
   blockCapacityHint: number;
+  assignments: Assignment[];
 }
 
 export default function SessionManagement() {
@@ -80,7 +81,7 @@ export default function SessionManagement() {
       return await apiRequest('POST', '/api/session-blocks', sessionData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/session-blocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/session-blocks', selectedDate] });
       toast({
         title: "Session created",
         description: "New session block has been created successfully.",
@@ -132,6 +133,8 @@ export default function SessionManagement() {
       date: formData.get('date') as string,
       startTime: formData.get('startTime') as string,
       endTime: formData.get('endTime') as string,
+      description: formData.get('description') as string,
+      slots: parseInt(formData.get('slots') as string, 10),
     });
   };
 
@@ -204,27 +207,63 @@ export default function SessionManagement() {
               </div>
             ) : (
               sessionBlocks.map((block: any) => (
-                <div key={block.id} className="border rounded-lg p-4 flex items-center justify-between" data-testid={`session-block-${block.id}`}>
-                  <div>
-                    <p className="font-medium">
-                      {block.startTime} - {block.endTime}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Date: {block.date} | Capacity: {block.blockCapacityHint || 8}
-                    </p>
+                <div key={block.id} className="border rounded-lg p-4" data-testid={`session-block-${block.id}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">
+                        {block.startTime} - {block.endTime}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                      Date: {block.date} | Capacity: {block.slots || 8}
+                      </p>
+                    {block.description && (
+                      <p className="text-sm text-gray-500 mt-1">{block.description}</p>
+                    )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteSessionBlockMutation.mutate(block.id)}
+                        disabled={deleteSessionBlockMutation.isPending}
+                        data-testid={`button-delete-session-${block.id}`}
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => deleteSessionBlockMutation.mutate(block.id)}
-                      disabled={deleteSessionBlockMutation.isPending}
-                      data-testid={`button-delete-session-${block.id}`}
-                    >
-                      <XCircle className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
+                  {block.assignments && block.assignments.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-semibold mb-2">Signed-up Mentees:</h4>
+                      <ul className="space-y-2">
+                        {block.assignments.map((assignment: any) => (
+                          <li key={assignment.assignment.id} className="flex items-center justify-between text-sm">
+                            <div>
+                              <span>{assignment.mentee.email}</span>
+                              <div className="text-xs text-gray-500">
+                                Progression: {assignment.mentee.progression.completedSteps} steps
+                                | Badges: {assignment.mentee.awards.length}
+                              </div>
+                            </div>
+                            <Badge variant={assignment.assignment.status === 'confirmed' ? 'default' : 'secondary'}>
+                              {assignment.assignment.status}
+                            </Badge>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {block.suggestedExercises && block.suggestedExercises.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <h4 className="text-sm font-semibold mb-2">Suggested Exercises:</h4>
+                      <ul className="space-y-1 text-sm text-gray-600">
+                        {block.suggestedExercises.map((exercise: any) => (
+                          <li key={exercise.id}>- {exercise.title}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -341,8 +380,28 @@ export default function SessionManagement() {
                 </div>
               </div>
               
-              <Button 
-                type="submit" 
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  name="description"
+                  type="text"
+                  placeholder="e.g., 2-way FS skills"
+                  data-testid="input-session-description"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="slots">Slots</Label>
+                <Input
+                  id="slots"
+                  name="slots"
+                  type="number"
+                  defaultValue="8"
+                  data-testid="input-session-slots"
+                />
+              </div>
+              <Button
+                type="submit"
                 className="w-full"
                 disabled={createSessionBlockMutation.isPending}
                 data-testid="button-create-session"

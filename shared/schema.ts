@@ -66,7 +66,8 @@ export const sessionBlocks = pgTable("session_blocks", {
   endTime: time("end_time").notNull(),
   dzId: uuid("dz_id"),
   loadIntervalMin: integer("load_interval_min").default(90),
-  blockCapacityHint: integer("block_capacity_hint").default(8),
+  slots: integer("slots").default(8),
+  description: text("description"),
 });
 
 // Attendance requests table
@@ -161,6 +162,13 @@ export const auditEvents = pgTable("audit_events", {
   at: timestamp("at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const exercises = pgTable("exercises", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: categoryEnum("category").notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -206,6 +214,10 @@ export const insertJumpLogSchema = createInsertSchema(jumpLogs).omit({
   id: true,
 });
 
+export const insertExerciseSchema = createInsertSchema(exercises).omit({
+  id: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type Mentor = typeof mentors.$inferSelect;
@@ -221,6 +233,7 @@ export type Badge = typeof badges.$inferSelect;
 export type Award = typeof awards.$inferSelect;
 export type JumpLog = typeof jumpLogs.$inferSelect;
 export type AuditEvent = typeof auditEvents.$inferSelect;
+export type Exercise = typeof exercises.$inferSelect;
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertMentor = z.infer<typeof insertMentorSchema>;
@@ -232,6 +245,7 @@ export type InsertAssignment = z.infer<typeof insertAssignmentSchema>;
 export type InsertProgressionStep = z.infer<typeof insertProgressionStepSchema>;
 export type InsertStepCompletion = z.infer<typeof insertStepCompletionSchema>;
 export type InsertJumpLog = z.infer<typeof insertJumpLogSchema>;
+export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 
 // Auth schemas
 export const loginSchema = z.object({

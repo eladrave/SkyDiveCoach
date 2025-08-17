@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, CalendarPlus, ClipboardList, BarChart3, Star } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface MentorStatsProps {
   stats?: {
@@ -16,6 +17,7 @@ interface MentorStatsProps {
 }
 
 export default function MentorStats({ stats }: MentorStatsProps) {
+  const [, setLocation] = useLocation();
   const defaultStats = {
     monthlyJumps: 0,
     studentsTrained: 0,
@@ -84,25 +86,28 @@ export default function MentorStats({ stats }: MentorStatsProps) {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Button 
+          <Button
             className="w-full justify-center"
             data-testid="button-update-availability"
+            onClick={() => setLocation("/sessions")}
           >
             <CalendarPlus className="mr-2 h-4 w-4" />
             Update Availability
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-center"
             data-testid="button-log-jump"
+            onClick={() => setLocation("/log-jump")}
           >
             <ClipboardList className="mr-2 h-4 w-4" />
             Log Jump
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-center"
             data-testid="button-view-progress"
+            onClick={() => setLocation("/progression")}
           >
             <BarChart3 className="mr-2 h-4 w-4" />
             Student Progress
