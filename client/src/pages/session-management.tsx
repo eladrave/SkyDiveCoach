@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Navigation from "@/components/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Users, Plus, CheckCircle, XCircle } from "lucide-react";
@@ -27,9 +29,16 @@ interface SessionBlock {
 }
 
 export default function SessionManagement() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+
+  useEffect(() => {
+    if (!authLoading && (!user || !['mentor', 'admin'].includes(user.role))) {
+      setLocation("/login");
+    }
+  }, [user, authLoading, setLocation]);
 
   const { data: assignments = [], isLoading } = useQuery({
     queryKey: ['/api/assignments', user?.id],
@@ -101,9 +110,14 @@ export default function SessionManagement() {
     );
   }
 
+  if (!user) return null;
+
   return (
-    <div className="space-y-6" data-testid="session-management">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-6" data-testid="session-management">
+          <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Session Management</h1>
           <p className="text-gray-600 mt-1">Manage your training sessions and assignments</p>
@@ -263,6 +277,8 @@ export default function SessionManagement() {
           </div>
         </CardContent>
       </Card>
+        </div>
+      </main>
     </div>
   );
 }

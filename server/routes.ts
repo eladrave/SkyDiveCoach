@@ -499,6 +499,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Progression routes
+  app.get("/api/progression-steps", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const steps = await storage.getProgressionSteps();
+      res.json(steps);
+    } catch (error) {
+      console.error("Get progression steps error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/step-completions/:userId", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const completions = await storage.getStepCompletionsByUserId(req.params.userId);
+      res.json(completions);
+    } catch (error) {
+      console.error("Get step completions error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/step-completions", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
+    try {
+      const mentorData = await storage.getMentorById(req.user!.id);
+      if (!mentorData) {
+        return res.status(400).json({ message: "Mentor profile not found" });
+      }
+
+      const completion = await storage.createStepCompletion({
+        ...req.body,
+        mentorId: mentorData.id,
+      });
+      res.json(completion);
+    } catch (error) {
+      console.error("Create step completion error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/badges", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const badges = await storage.getBadges();
+      res.json(badges);
+    } catch (error) {
+      console.error("Get badges error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/awards/:userId", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const awards = await storage.getAwardsByUserId(req.params.userId);
+      res.json(awards);
+    } catch (error) {
+      console.error("Get awards error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // User management routes
+  app.get("/api/users", authenticateToken, requireRole(["admin"]), async (req: AuthRequest, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/mentors", authenticateToken, requireRole(["admin"]), async (req: AuthRequest, res) => {
+    try {
+      const mentors = await storage.getAllMentors();
+      res.json(mentors);
+    } catch (error) {
+      console.error("Get mentors error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/mentees", authenticateToken, requireRole(["admin"]), async (req: AuthRequest, res) => {
+    try {
+      const mentees = await storage.getAllMentees();
+      res.json(mentees);
+    } catch (error) {
+      console.error("Get mentees error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Admin routes
   app.get("/api/admin/roster", authenticateToken, requireRole(["admin"]), async (req, res) => {
     try {

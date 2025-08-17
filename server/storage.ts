@@ -478,6 +478,79 @@ export class DatabaseStorage implements IStorage {
       },
     };
   }
+
+  // Additional methods for progression and user management
+  async getProgressionSteps(): Promise<ProgressionStep[]> {
+    return await db.select().from(schema.progressionSteps).orderBy(schema.progressionSteps.category, schema.progressionSteps.title);
+  }
+
+  async getStepCompletionsByUserId(userId: string): Promise<StepCompletion[]> {
+    const menteeData = await this.getMenteeById(userId);
+    if (!menteeData) return [];
+    return await db.select().from(schema.stepCompletions).where(eq(schema.stepCompletions.menteeId, menteeData.id));
+  }
+
+  async createStepCompletion(completion: Omit<StepCompletion, 'id' | 'completedAt'>): Promise<StepCompletion> {
+    const result = await db.insert(schema.stepCompletions).values(completion).returning();
+    return result[0];
+  }
+
+  async getBadges(): Promise<Badge[]> {
+    return await db.select().from(schema.badges);
+  }
+
+  async getAwardsByUserId(userId: string): Promise<any[]> {
+    const menteeData = await this.getMenteeById(userId);
+    if (!menteeData) return [];
+    
+    return await db
+      .select({
+        id: schema.awards.id,
+        badgeId: schema.awards.badgeId,
+        awardedAt: schema.awards.awardedAt,
+        badge: {
+          id: schema.badges.id,
+          code: schema.badges.code,
+          name: schema.badges.name,
+          description: schema.badges.description,
+        }
+      })
+      .from(schema.awards)
+      .leftJoin(schema.badges, eq(schema.awards.badgeId, schema.badges.id))
+      .where(eq(schema.awards.menteeId, menteeData.id));
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(schema.users).orderBy(schema.users.createdAt);
+  }
+
+  async getAllMentors(): Promise<any[]> {
+    return await db
+      .select({
+        id: schema.mentors.id,
+        userId: schema.mentors.userId,
+        certificationLevel: schema.mentors.certificationLevel,
+        yearsExperience: schema.mentors.yearsExperience,
+        specialties: schema.mentors.specialties,
+        user: schema.users
+      })
+      .from(schema.mentors)
+      .leftJoin(schema.users, eq(schema.mentors.userId, schema.users.id));
+  }
+
+  async getAllMentees(): Promise<any[]> {
+    return await db
+      .select({
+        id: schema.mentees.id,
+        userId: schema.mentees.userId,
+        jumpCount: schema.mentees.jumpCount,
+        comfortLevel: schema.mentees.comfortLevel,
+        goals: schema.mentees.goals,
+        user: schema.users
+      })
+      .from(schema.mentees)
+      .leftJoin(schema.users, eq(schema.mentees.userId, schema.users.id));
+  }
 }
 
 export const storage = new DatabaseStorage();
