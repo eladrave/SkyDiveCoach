@@ -21,6 +21,7 @@ import {
   Star,
   Upload
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface ProgressionStep {
   id: string;
@@ -60,6 +61,7 @@ export default function Progression() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const [selectedMenteeId, setSelectedMenteeId] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   useEffect(() => {
@@ -73,14 +75,23 @@ export default function Progression() {
     enabled: !!user,
   });
 
+  // For mentors, get list of mentees to select from
+  const { data: mentees = [] } = useQuery({
+    queryKey: ['/api/mentees'],
+    enabled: !!user && user.role === 'mentor',
+  });
+
+  // Use selected mentee ID for mentors, current user ID for mentees
+  const targetUserId = user?.role === 'mentor' ? selectedMenteeId : user?.id;
+
   const { data: completions = [] } = useQuery({
-    queryKey: ['/api/step-completions', user?.id],
-    enabled: !!user,
+    queryKey: ['/api/step-completions', targetUserId],
+    enabled: !!user && !!targetUserId,
   });
 
   const { data: awards = [] } = useQuery({
-    queryKey: ['/api/awards', user?.id],
-    enabled: !!user,
+    queryKey: ['/api/awards', targetUserId],
+    enabled: !!user && !!targetUserId,
   });
 
   const { data: badges = [] } = useQuery({
@@ -89,11 +100,8 @@ export default function Progression() {
   });
 
   const completeStepMutation = useMutation({
-    mutationFn: async (data: { stepId: string; notes: string; evidenceUrl?: string }) => {
-      return await apiRequest('/api/step-completions', {
-        method: 'POST',
-        body: data,
-      });
+    mutationFn: async (data: { stepId: string; menteeId: string; notes: string; evidenceUrl?: string }) => {
+      return await apiRequest('POST', '/api/step-completions', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/step-completions'] });
@@ -136,7 +144,9 @@ export default function Progression() {
     : 0;
 
   const handleCompleteStep = (stepId: string, notes: string) => {
-    completeStepMutation.mutate({ stepId, notes });
+    const menteeId = user?.role === 'mentor' ? selectedMenteeId : user?.id;
+    if (!menteeId) return;
+    completeStepMutation.mutate({ stepId, menteeId, notes });
   };
 
   return (
@@ -147,12 +157,41 @@ export default function Progression() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Progression Tracking</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {user?.role === 'mentor' ? 'Mentee Progress Tracking' : 'My Progression'}
+              </h1>
               <p className="text-gray-600 mt-1">
-                {user.role === 'mentee' ? 'Track your skydiving progression and achievements' : 'Monitor mentee progression'}
+                {user?.role === 'mentor' 
+                  ? 'Track and sign off on your mentee\'s skydiving progression' 
+                  : 'Track your skydiving progression and achievements'
+                }
               </p>
             </div>
+            {user?.role === 'mentor' && mentees.length > 0 && (
+              <div className="w-64">
+                <Select value={selectedMenteeId} onValueChange={setSelectedMenteeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a mentee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mentees.map((mentee: any) => (
+                      <SelectItem key={mentee.id} value={mentee.id}>
+                        {mentee.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
+
+          {user?.role === 'mentor' && !selectedMenteeId && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-yellow-800">
+                Please select a mentee above to view their progression tracking
+              </p>
+            </div>
+          )}
 
           {/* Progress Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -148,31 +148,46 @@ export default function SessionManagement() {
         </Button>
       </div>
 
+      {/* Workflow Guide */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-2">📋 How Session Assignment Works:</h3>
+        <div className="text-sm text-blue-800 space-y-1">
+          <p><strong>Step 1:</strong> Update your availability and create session blocks (use buttons above and below)</p>
+          <p><strong>Step 2:</strong> Mentees can see and request your available sessions</p>
+          <p><strong>Step 3:</strong> You'll see their requests in "Pending Assignment Requests" below</p>
+          <p><strong>Step 4:</strong> Accept or decline requests - accepted sessions become confirmed training</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pending Assignments */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Pending Assignments
+              Pending Assignment Requests
             </CardTitle>
             <CardDescription>
-              Review and respond to mentee assignment requests
+              Mentees have requested training sessions - Accept or Decline these requests
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {assignments.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No pending assignments at the moment
+                  <div className="space-y-2">
+                    <p>No pending assignment requests at the moment</p>
+                    <p className="text-sm">When mentees request your sessions, they'll appear here for your approval</p>
+                  </div>
                 </div>
               ) : (
                 assignments.map((assignment: Assignment) => (
                   <div key={assignment.id} className="border rounded-lg p-4 space-y-3" data-testid={`assignment-${assignment.id}`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium">Session Assignment</p>
-                        <p className="text-sm text-gray-600">{new Date(assignment.createdAt).toLocaleDateString()}</p>
+                        <p className="font-medium">🪂 Training Session Request</p>
+                        <p className="text-sm text-gray-600">Requested: {new Date(assignment.createdAt).toLocaleDateString()}</p>
+                        <p className="text-sm text-blue-600 font-medium">A mentee wants to book this session with you</p>
                       </div>
                       <Badge variant="secondary">{assignment.status}</Badge>
                     </div>
