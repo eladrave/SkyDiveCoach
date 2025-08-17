@@ -297,7 +297,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Session block routes
   app.post("/api/session-blocks", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
     try {
-      const sessionBlock = await storage.createSessionBlock(req.body);
+      // Set the mentorId to the current user for mentors
+      const sessionBlockData = {
+        ...req.body,
+        mentorId: req.user!.role === 'mentor' ? req.user!.id : req.body.mentorId,
+      };
+      const sessionBlock = await storage.createSessionBlock(sessionBlockData);
       res.json(sessionBlock);
     } catch (error) {
       console.error("Create session block error:", error);
@@ -309,25 +314,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const startDate = req.query.startDate as string || new Date().toISOString().split('T')[0];
       const endDate = req.query.endDate as string || startDate;
-      const sessionBlocks = await storage.getSessionBlocksByDateRange(startDate, endDate);
       
-      // Add mentor information to session blocks
-      try {
-        const mentorsWithUsers = await storage.getMentorsWithUsers();
-        const sessionBlocksWithMentors = sessionBlocks.map((block) => {
-          // For now, assign first available mentor - this should be improved with proper mentor assignment
-          const mentor = mentorsWithUsers.length > 0 ? mentorsWithUsers[0] : null;
-          return {
-            ...block,
-            mentorName: mentor?.user?.email || "Available Mentor",
-            mentorId: mentor?.id || null,
-          };
-        });
-        res.json(sessionBlocksWithMentors);
-      } catch (mentorError) {
-        console.error("Mentor fetch error:", mentorError);
-        // Return session blocks without mentor info if mentor fetch fails
-        res.json(sessionBlocks);
+      let sessionBlocks;
+      
+      // If user is a mentor, show only their session blocks
+      if (req.user!.role === 'mentor') {
+        sessionBlocks = await storage.getSessionBlocksByMentorAndDate(req.user!.id, startDate, endDate);
+        // For mentor's own blocks, add their own info
+        res.json(sessionBlocks.map(block => ({
+          ...block,
+          mentorName: req.user!.email || "You",
+          mentorId: req.user!.id,
+        })));
+      } else {
+        // For mentees/admins, show all session blocks with mentor info
+        sessionBlocks = await storage.getSessionBlocksByDateRange(startDate, endDate);
+        
+        try {
+          const mentorsWithUsers = await storage.getMentorsWithUsers();
+          const sessionBlocksWithMentors = sessionBlocks.map((block) => {
+            // Find the mentor for this specific block or use first available
+            const mentor = mentorsWithUsers.find(m => m.id === block.mentorId) || 
+                          (mentorsWithUsers.length > 0 ? mentorsWithUsers[0] : null);
+            return {
+              ...block,
+              mentorName: mentor?.user?.email || "Available Mentor",
+              mentorId: mentor?.id || null,
+            };
+          });
+          res.json(sessionBlocksWithMentors);
+        } catch (mentorError) {
+          console.error("Mentor fetch error:", mentorError);
+          res.json(sessionBlocks);
+        }
       }
     } catch (error) {
       console.error("Get session blocks error:", error);

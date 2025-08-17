@@ -59,6 +59,7 @@ export interface IStorage {
   // Session operations
   createSessionBlock(sessionBlock: InsertSessionBlock): Promise<SessionBlock>;
   getSessionBlocksByDateRange(startDate: string, endDate: string): Promise<SessionBlock[]>;
+  getSessionBlocksByMentorAndDate(mentorId: string, startDate: string, endDate: string): Promise<SessionBlock[]>;
   getSessionBlockById(id: string): Promise<SessionBlock | undefined>;
 
   // Assignment operations
@@ -216,6 +217,20 @@ export class DatabaseStorage implements IStorage {
       .from(schema.sessionBlocks)
       .where(
         and(
+          gte(schema.sessionBlocks.date, startDate),
+          lte(schema.sessionBlocks.date, endDate)
+        )
+      )
+      .orderBy(schema.sessionBlocks.date, schema.sessionBlocks.startTime);
+  }
+
+  async getSessionBlocksByMentorAndDate(mentorId: string, startDate: string, endDate: string): Promise<SessionBlock[]> {
+    return await db
+      .select()
+      .from(schema.sessionBlocks)
+      .where(
+        and(
+          eq(schema.sessionBlocks.mentorId, mentorId),
           gte(schema.sessionBlocks.date, startDate),
           lte(schema.sessionBlocks.date, endDate)
         )
