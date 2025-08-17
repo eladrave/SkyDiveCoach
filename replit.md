@@ -11,6 +11,12 @@ SkyMentor is a comprehensive skydiving mentorship platform that connects experie
 - ✅ Added mentee selector dropdown for mentors in progression tracking
 - ✅ Improved assignment request UI with clear explanations and status indicators
 - ✅ Enhanced session assignment workflow with step-by-step instructions
+- ✅ Updated progression steps for A-license skydivers (under 100 jumps):
+  - 2 2-way formation skills (jumps 26-30)
+  - 6 3-way formation skills (jumps 35-60)
+  - 10 4-way formation skills (jumps 65-95)
+  - 3 canopy control skills (jumps 30-50)
+  - 3 safety skills (jumps 26-45)
 
 # User Preferences
 

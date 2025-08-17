@@ -7,7 +7,7 @@ import { z } from "zod";
 export const roleEnum = pgEnum("role", ["mentor", "mentee", "admin"]);
 export const statusEnum = pgEnum("status", ["pending", "confirmed", "declined", "cancelled"]);
 export const comfortLevelEnum = pgEnum("comfort_level", ["low", "medium", "high"]);
-export const categoryEnum = pgEnum("category", ["2way", "3way", "canopy"]);
+export const categoryEnum = pgEnum("category", ["2way", "3way", "4way", "canopy", "safety"]);
 
 // Users table
 export const users = pgTable("users", {
