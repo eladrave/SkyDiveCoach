@@ -271,15 +271,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Also create an assignment for the mentor to see
-      // For now, we'll use a placeholder mentor ID - this should be based on session ownership
-      const mentors = await storage.getAllMentors();
-      if (mentors.length > 0) {
-        await storage.createAssignment({
-          sessionBlockId: req.body.session_block_id,
-          menteeId: menteeData.id,
-          mentorId: mentors[0].id, // Use first available mentor - should be improved
-          status: "pending",
-        });
+      // For now, we'll use the first available mentor - in a real system this would be based on session ownership
+      try {
+        const mentorsWithUsers = await storage.getMentorsWithUsers();
+        if (mentorsWithUsers.length > 0) {
+          await storage.createAssignment({
+            sessionBlockId: req.body.session_block_id,
+            menteeId: menteeData.id,
+            mentorId: mentorsWithUsers[0].id,
+            status: "pending",
+          });
+        }
+      } catch (assignmentError) {
+        console.error("Assignment creation error:", assignmentError);
+        // Continue even if assignment creation fails
       }
 
       res.json(request);
@@ -307,20 +312,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionBlocks = await storage.getSessionBlocksByDateRange(startDate, endDate);
       
       // Add mentor information to session blocks
-      const sessionBlocksWithMentors = await Promise.all(
-        sessionBlocks.map(async (block) => {
+      try {
+        const mentorsWithUsers = await storage.getMentorsWithUsers();
+        const sessionBlocksWithMentors = sessionBlocks.map((block) => {
           // For now, assign first available mentor - this should be improved with proper mentor assignment
-          const mentors = await storage.getAllMentors();
-          const mentor = mentors.length > 0 ? mentors[0] : null;
+          const mentor = mentorsWithUsers.length > 0 ? mentorsWithUsers[0] : null;
           return {
             ...block,
             mentorName: mentor?.user?.email || "Available Mentor",
             mentorId: mentor?.id || null,
           };
-        })
-      );
-      
-      res.json(sessionBlocksWithMentors);
+        });
+        res.json(sessionBlocksWithMentors);
+      } catch (mentorError) {
+        console.error("Mentor fetch error:", mentorError);
+        // Return session blocks without mentor info if mentor fetch fails
+        res.json(sessionBlocks);
+      }
     } catch (error) {
       console.error("Get session blocks error:", error);
       res.status(500).json({ message: "Internal server error" });
