@@ -85,13 +85,13 @@ export default function Progression() {
     }
   }, [user, authLoading, setLocation]);
 
-  const { data: progressionSteps = [], isLoading } = useQuery({
+  const { data: progressionSteps = [], isLoading } = useQuery<ProgressionStep[]>({
     queryKey: ['/api/progression-steps'],
     enabled: !!user,
   });
 
   // For mentors, get list of mentees to select from
-  const { data: mentees = [] } = useQuery({
+  const { data: mentees = [] } = useQuery<any[]>({
     queryKey: ['/api/mentees'],
     enabled: !!user && user.role === 'mentor',
   });
@@ -99,17 +99,17 @@ export default function Progression() {
   // Use selected mentee ID for mentors, current user ID for mentees
   const targetUserId = user?.role === 'mentor' ? selectedMenteeId : user?.id;
 
-  const { data: completions = [] } = useQuery({
+  const { data: completions = [] } = useQuery<StepCompletion[]>({
     queryKey: ['/api/step-completions', targetUserId],
     enabled: !!user && !!targetUserId,
   });
 
-  const { data: awards = [] } = useQuery({
+  const { data: awards = [] } = useQuery<Award[]>({
     queryKey: ['/api/awards', targetUserId],
     enabled: !!user && !!targetUserId,
   });
 
-  const { data: badges = [] } = useQuery({
+  const { data: badges = [] } = useQuery<Badge[]>({
     queryKey: ['/api/badges'],
     enabled: !!user,
   });
