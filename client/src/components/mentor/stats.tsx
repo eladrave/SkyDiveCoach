@@ -4,10 +4,14 @@ import { TrendingUp, CalendarPlus, ClipboardList, BarChart3, Star } from "lucide
 
 interface MentorStatsProps {
   stats?: {
-    monthlyJumps: number;
-    studentsTrained: number;
-    signoffs: number;
-    rating: number;
+    monthlyJumps?: number;
+    studentsTrained?: number;
+    signoffs?: number;
+    rating?: number;
+    activeMentees?: number;
+    completedSessions?: number;
+    avgRating?: number;
+    totalHours?: number;
   };
 }
 
@@ -17,9 +21,13 @@ export default function MentorStats({ stats }: MentorStatsProps) {
     studentsTrained: 0,
     signoffs: 0,
     rating: 0,
+    activeMentees: 0,
+    completedSessions: 0,
+    avgRating: 0,
+    totalHours: 0,
   };
 
-  const currentStats = stats || defaultStats;
+  const currentStats = { ...defaultStats, ...stats };
 
   return (
     <>
@@ -30,21 +38,21 @@ export default function MentorStats({ stats }: MentorStatsProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">This Month</span>
-            <span className="text-lg font-semibold text-gray-900" data-testid="monthly-jumps">
-              {currentStats.monthlyJumps} jumps
+            <span className="text-sm text-gray-600">Active Mentees</span>
+            <span className="text-lg font-semibold text-gray-900" data-testid="active-mentees">
+              {currentStats.activeMentees || 0}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Students Trained</span>
-            <span className="text-lg font-semibold text-gray-900" data-testid="students-trained">
-              {currentStats.studentsTrained} students
+            <span className="text-sm text-gray-600">Completed Sessions</span>
+            <span className="text-lg font-semibold text-gray-900" data-testid="completed-sessions">
+              {currentStats.completedSessions || 0}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Signoffs Given</span>
-            <span className="text-lg font-semibold text-gray-900" data-testid="signoffs-given">
-              {currentStats.signoffs} signoffs
+            <span className="text-sm text-gray-600">Total Hours</span>
+            <span className="text-lg font-semibold text-gray-900" data-testid="total-hours">
+              {currentStats.totalHours || 0} hrs
             </span>
           </div>
           <div className="pt-4 border-t border-gray-200">
@@ -56,13 +64,13 @@ export default function MentorStats({ stats }: MentorStatsProps) {
                     <Star
                       key={star}
                       className={`w-4 h-4 ${
-                        star <= Math.floor(currentStats.rating) ? "fill-current" : ""
+                        star <= Math.floor(currentStats.avgRating || currentStats.rating || 0) ? "fill-current" : ""
                       }`}
                     />
                   ))}
                 </div>
                 <span className="ml-2 text-sm text-gray-600" data-testid="rating-value">
-                  {currentStats.rating.toFixed(1)}
+                  {(currentStats.avgRating || currentStats.rating || 0).toFixed(1)}
                 </span>
               </div>
             </div>

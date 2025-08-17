@@ -8,6 +8,7 @@ import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import Dashboard from "@/pages/dashboard";
 import SessionManagement from "@/pages/session-management";
+import MenteeSessions from "@/pages/mentee-sessions";
 import Progression from "@/pages/progression";
 import UserManagement from "@/pages/users";
 import NotFound from "@/pages/not-found";
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/sessions" component={SessionManagement} />
+      <Route path="/mentee-sessions" component={MenteeSessions} />
       <Route path="/progression" component={Progression} />
       <Route path="/users" component={UserManagement} />
       <Route component={NotFound} />

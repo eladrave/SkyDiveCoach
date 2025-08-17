@@ -35,8 +35,13 @@ export default function SessionManagement() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    if (!authLoading && (!user || !['mentor', 'admin'].includes(user.role))) {
-      setLocation("/login");
+    if (!authLoading && user) {
+      // Redirect mentees to their specific sessions page
+      if (user.role === 'mentee') {
+        setLocation("/mentee-sessions");
+      } else if (!['mentor', 'admin'].includes(user.role)) {
+        setLocation("/login");
+      }
     }
   }, [user, authLoading, setLocation]);
 

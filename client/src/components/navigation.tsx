@@ -28,9 +28,9 @@ export default function Navigation() {
     },
     {
       name: "Sessions",
-      href: "/sessions",
+      href: user?.role === 'mentee' ? "/mentee-sessions" : "/sessions",
       icon: Calendar,
-      roles: ["mentor", "admin"]
+      roles: ["mentor", "mentee", "admin"]
     },
     {
       name: "Progression",
