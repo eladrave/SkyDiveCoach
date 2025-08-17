@@ -257,11 +257,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Mentee profile not found" });
       }
 
+      // Get the session block to find the mentor
+      const sessionBlock = await storage.getSessionBlockById(req.body.session_block_id);
+      if (!sessionBlock) {
+        return res.status(404).json({ message: "Session block not found" });
+      }
+
+      // Create attendance request
       const request = await storage.createAttendanceRequest({
         menteeId: menteeData.id,
         sessionBlockId: req.body.session_block_id,
         status: "pending",
       });
+
+      // Also create an assignment for the mentor to see
+      // For now, we'll use a placeholder mentor ID - this should be based on session ownership
+      const mentors = await storage.getAllMentors();
+      if (mentors.length > 0) {
+        await storage.createAssignment({
+          sessionBlockId: req.body.session_block_id,
+          menteeId: menteeData.id,
+          mentorId: mentors[0].id, // Use first available mentor - should be improved
+          status: "pending",
+        });
+      }
+
       res.json(request);
     } catch (error) {
       console.error("Create attendance error:", error);
@@ -285,7 +305,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = req.query.startDate as string || new Date().toISOString().split('T')[0];
       const endDate = req.query.endDate as string || startDate;
       const sessionBlocks = await storage.getSessionBlocksByDateRange(startDate, endDate);
-      res.json(sessionBlocks);
+      
+      // Add mentor information to session blocks
+      const sessionBlocksWithMentors = await Promise.all(
+        sessionBlocks.map(async (block) => {
+          // For now, assign first available mentor - this should be improved with proper mentor assignment
+          const mentors = await storage.getAllMentors();
+          const mentor = mentors.length > 0 ? mentors[0] : null;
+          return {
+            ...block,
+            mentorName: mentor?.user?.email || "Available Mentor",
+            mentorId: mentor?.id || null,
+          };
+        })
+      );
+      
+      res.json(sessionBlocksWithMentors);
     } catch (error) {
       console.error("Get session blocks error:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -325,26 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Assignment routes
-  app.get("/api/assignments", authenticateToken, async (req, res) => {
-    try {
-      const userId = req.query.user_id as string || req.user!.id;
-      let assignments;
 
-      if (req.user!.role === "mentor") {
-        assignments = await storage.getAssignmentsByMentorId(userId);
-      } else if (req.user!.role === "mentee") {
-        assignments = await storage.getAssignmentsByMenteeId(userId);
-      } else {
-        assignments = await storage.getAssignmentsWithDetails();
-      }
-
-      res.json(assignments);
-    } catch (error) {
-      console.error("Get assignments error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
 
   app.post("/api/assignments/:id/confirm", authenticateToken, requireRole(["mentor"]), async (req, res) => {
     try {
@@ -582,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/mentees", authenticateToken, requireRole(["admin"]), async (req: AuthRequest, res) => {
+  app.get("/api/mentees", authenticateToken, requireRole(["admin", "mentor"]), async (req: AuthRequest, res) => {
     try {
       const mentees = await storage.getAllMentees();
       res.json(mentees);

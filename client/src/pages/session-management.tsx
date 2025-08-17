@@ -297,14 +297,28 @@ export default function SessionManagement() {
                 No sessions scheduled for this date
               </div>
             ) : (
-              sessionBlocks.map((session: SessionBlock) => (
+              sessionBlocks.map((session: SessionBlock & { mentorName?: string }) => (
                 <div key={session.id} className="border rounded-lg p-4" data-testid={`session-${session.id}`}>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">{session.startTime} - {session.endTime}</p>
                       <p className="text-sm text-gray-600">Capacity: {session.blockCapacityHint} students</p>
+                      {session.mentorName && (
+                        <p className="text-sm text-blue-600">👨‍✈️ Mentor: {session.mentorName}</p>
+                      )}
                     </div>
-                    <Badge variant="outline">Scheduled</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">Available</Badge>
+                      {user.role === "mentee" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleRequestSession(session.id)}
+                          data-testid={`button-request-${session.id}`}
+                        >
+                          Request Session
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
