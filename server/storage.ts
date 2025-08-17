@@ -577,46 +577,45 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select({
         id: schema.mentors.id,
-        userId: schema.mentors.userId,
-        certificationLevel: schema.mentors.certificationLevel,
-        yearsExperience: schema.mentors.yearsExperience,
-        specialties: schema.mentors.specialties,
-        user: schema.users
+        email: schema.users.email,
+        ratings: schema.mentors.ratings,
+        coachNumber: schema.mentors.coachNumber,
+        disciplines: schema.mentors.disciplines,
+        maxConcurrentMentees: schema.mentors.maxConcurrentMentees,
+        currentMentees: schema.mentors.currentMentees,
+        dzEndorsement: schema.mentors.dzEndorsement
       })
       .from(schema.mentors)
-      .leftJoin(schema.users, eq(schema.mentors.userId, schema.users.id));
+      .leftJoin(schema.users, eq(schema.mentors.id, schema.users.id));
   }
 
   async getAllMentees(): Promise<any[]> {
-    return await db
-      .select({
-        id: schema.mentees.id,
-        userId: schema.mentees.userId,
-        jumpCount: schema.mentees.jumpCount,
-        comfortLevel: schema.mentees.comfortLevel,
-        goals: schema.mentees.goals,
-        user: schema.users
-      })
-      .from(schema.mentees)
-      .leftJoin(schema.users, eq(schema.mentees.userId, schema.users.id));
+    // Simple query to get all mentees with their user information
+    const menteesList = await db.select().from(schema.mentees);
+    const menteeWithUsers = [];
+    
+    for (const mentee of menteesList) {
+      const user = await db.select().from(schema.users).where(eq(schema.users.id, mentee.id)).limit(1);
+      menteeWithUsers.push({
+        id: mentee.id,
+        email: user[0]?.email || '',
+        comfortLevel: mentee.comfortLevel,
+        goals: mentee.goals,
+        canopySize: mentee.canopySize,
+        lastCurrencyDate: mentee.lastCurrencyDate
+      });
+    }
+    
+    return menteeWithUsers;
   }
 
-  // Add missing availability methods
-  async createAvailability(availability: Omit<Availability, 'id'>): Promise<Availability> {
-    const result = await db.insert(schema.availability).values(availability).returning();
-    return result[0];
-  }
-
+  // Availability update method  
   async updateAvailability(id: string, updates: Partial<Availability>): Promise<Availability> {
     const result = await db.update(schema.availability).set(updates).where(eq(schema.availability.id, id)).returning();
     return result[0];
   }
 
-  async deleteAvailability(id: string): Promise<void> {
-    await db.delete(schema.availability).where(eq(schema.availability.id, id));
-  }
-
-  // Add missing assignment update method
+  // Assignment update method
   async updateAssignment(id: string, updates: Partial<Assignment>): Promise<Assignment> {
     const result = await db.update(schema.assignments).set(updates).where(eq(schema.assignments.id, id)).returning();
     return result[0];
