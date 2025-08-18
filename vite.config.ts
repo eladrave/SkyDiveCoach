@@ -29,6 +29,24 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: "0.0.0.0", // Listen on all network interfaces for Docker
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      port: 5173,
+      host: "localhost", // Use localhost for HMR WebSocket connections
+    },
+    proxy: {
+      "/api": {
+        target: process.env.VITE_API_URL || "http://backend:5000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+    watch: {
+      usePolling: true, // Enable polling for Docker file watching
+      interval: 1000,
+    },
     fs: {
       strict: true,
       deny: ["**/.*"],

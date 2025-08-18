@@ -5,10 +5,21 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev:docker": "NODE_ENV=development tsx watch server/index.ts",
+    "dev:frontend": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:seed": "tsx server/seed.ts",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down",
+    "docker:build": "docker-compose build",
+    "docker:logs": "docker-compose logs -f",
+    "docker:db:push": "docker-compose exec backend npm run db:push",
+    "docker:db:seed": "docker-compose exec backend npm run db:seed",
+    "docker:restart": "docker-compose restart",
+    "docker:clean": "docker-compose down -v"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

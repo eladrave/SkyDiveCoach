@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+*.build/
+.cache/
+
+# Version control
+.git/
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Database files
+migrations/
+*.db
+*.sqlite
+
+# Testing
+coverage/
+.nyc_output/
+
+# Documentation
+*.md
+!README.md
+!DATABASE.md
+!WARP.md
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Logs
+logs/
+*.log
+
+# Docker files (when building other containers)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Python cache (from db_setup.py)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Replit specific
+.replit
+.upm/
+.config/

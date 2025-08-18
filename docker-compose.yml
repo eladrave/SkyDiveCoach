@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: skymentor-db
+    environment:
+      POSTGRES_USER: skymentor
+      POSTGRES_PASSWORD: skymentor123
+      POSTGRES_DB: skymentor
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"  # Map to 5433 on host to avoid conflicts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skymentor -d skymentor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skymentor-network
+
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: skymentor-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://skymentor:skymentor123@db:5432/skymentor
+      - PGHOST=db
+      - PGPORT=5432
+      - PGDATABASE=skymentor
+      - PGUSER=skymentor
+      - PGPASSWORD=skymentor123
+      - SESSION_SECRET=dev-secret-key-for-docker
+      - PORT=5000
+    volumes:
+      # Mount source code for hot reload
+      - ./server:/app/server:delegated
+      - ./shared:/app/shared:delegated
+      - ./client:/app/client:delegated
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./drizzle.config.ts:/app/drizzle.config.ts:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
+      # Exclude node_modules to use container's installed dependencies
+      - backend_node_modules:/app/node_modules
+    ports:
+      - "5001:5000"  # Map to 5001 on host to avoid conflicts
+    command: npm run dev:docker
+    networks:
+      - skymentor-network
+    restart: unless-stopped
+
+  # Frontend Vite Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: skymentor-frontend
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:5001
+      - CHOKIDAR_USEPOLLING=true  # Enable polling for file watching in Docker
+    volumes:
+      # Mount source code for hot reload
+      - ./client:/app/client:delegated
+      - ./shared:/app/shared:delegated
+      - ./attached_assets:/app/attached_assets:ro
+      - ./package.json:/app/package.json:ro
+      - ./package-lock.json:/app/package-lock.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
+      - ./tailwind.config.ts:/app/tailwind.config.ts:ro
+      - ./postcss.config.js:/app/postcss.config.js:ro
+      - ./components.json:/app/components.json:ro
+      # Exclude node_modules to use container's installed dependencies
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    command: npm run dev:frontend
+    networks:
+      - skymentor-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_node_modules:
+    driver: local
+  frontend_node_modules:
+    driver: local
+
+networks:
+  skymentor-network:
+    driver: bridge

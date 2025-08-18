@@ -227,7 +227,7 @@ class DatabaseSetup:
                 category category NOT NULL,
                 required BOOLEAN DEFAULT true,
                 min_jumps_gate INTEGER DEFAULT 0,
-                references JSONB
+                references_json JSONB
             )
         """)
         
@@ -325,8 +325,10 @@ class DatabaseSetup:
         
     def hash_password(self, password: str) -> str:
         """Hash password using bcrypt-compatible method."""
-        # Simple hash for demo - in production use bcrypt
-        return hashlib.pbkdf2_hex(password.encode(), b'salt', 100000)
+        # For development/demo - using simple hash
+        # In production, this should use bcrypt
+        import hashlib
+        return hashlib.pbkdf2_hmac('sha256', password.encode(), b'salt', 100000).hex()
         
     def seed_users(self) -> Dict[str, str]:
         """Create seed user accounts and return user IDs."""
@@ -544,7 +546,8 @@ class DatabaseSetup:
         
         for table in tables:
             self.cursor.execute(f"SELECT COUNT(*) FROM {table}")
-            count = self.cursor.fetchone()[0]
+            result = self.cursor.fetchone()
+            count = result['count'] if result else 0
             print(f"  {table}: {count} records")
             
         # Verify progression step counts
