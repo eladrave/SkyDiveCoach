@@ -68,7 +68,7 @@ services:
     container_name: skymentor-frontend
     environment:
       - NODE_ENV=development
-      - VITE_API_URL=http://localhost:5001
+      - VITE_API_URL=http://backend:5000
       - CHOKIDAR_USEPOLLING=true  # Enable polling for file watching in Docker
     volumes:
       # Mount source code for hot reload

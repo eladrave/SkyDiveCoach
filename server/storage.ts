@@ -246,6 +246,39 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getSessionBlockWithParticipants(id: string): Promise<any> {
+    const sessionBlock = await db.select().from(schema.sessionBlocks).where(eq(schema.sessionBlocks.id, id)).limit(1);
+    
+    if (!sessionBlock[0]) {
+      return undefined;
+    }
+
+    // Get assignments for this session block with mentee details
+    const assignmentsWithMentees = await db
+      .select()
+      .from(schema.assignments)
+      .innerJoin(schema.users, eq(schema.assignments.menteeId, schema.users.id))
+      .where(eq(schema.assignments.sessionBlockId, id));
+
+    return {
+      ...sessionBlock[0],
+      assignments: assignmentsWithMentees.map(row => ({
+        id: row.assignments.id,
+        sessionBlockId: row.assignments.sessionBlockId,
+        menteeId: row.assignments.menteeId,
+        mentorId: row.assignments.mentorId,
+        status: row.assignments.status,
+        createdAt: row.assignments.createdAt,
+        mentee: {
+          id: row.users.id,
+          email: row.users.email,
+          firstName: row.users.firstName,
+          lastName: row.users.lastName,
+        },
+      })),
+    };
+  }
+
   async deleteSessionBlock(id: string): Promise<boolean> {
     const result = await db.delete(schema.sessionBlocks).where(eq(schema.sessionBlocks.id, id));
     return true;
@@ -395,6 +428,38 @@ export class DatabaseStorage implements IStorage {
       .from(schema.jumpLogs)
       .where(eq(schema.jumpLogs.menteeId, menteeId))
       .orderBy(desc(schema.jumpLogs.date));
+  }
+
+  async getAllJumpLogs(): Promise<JumpLog[]> {
+    return await db
+      .select()
+      .from(schema.jumpLogs)
+      .orderBy(desc(schema.jumpLogs.date));
+  }
+
+  async getJumpLogById(id: string): Promise<JumpLog | undefined> {
+    const result = await db
+      .select()
+      .from(schema.jumpLogs)
+      .where(eq(schema.jumpLogs.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateJumpLog(id: string, updates: Partial<JumpLog>): Promise<JumpLog> {
+    const result = await db
+      .update(schema.jumpLogs)
+      .set(updates)
+      .where(eq(schema.jumpLogs.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteJumpLog(id: string): Promise<boolean> {
+    const result = await db
+      .delete(schema.jumpLogs)
+      .where(eq(schema.jumpLogs.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getMentorDashboardData(mentorId: string): Promise<any> {

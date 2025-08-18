@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Navigation from "@/components/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Plane, Parachute, Clock, Calendar, Plus, Edit, Trash2 } from "lucide-react";
+import { Plane, Clock, Calendar, Plus, Edit, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,

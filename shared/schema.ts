@@ -67,6 +67,10 @@ export const sessionBlocks = pgTable("session_blocks", {
   dzId: uuid("dz_id"),
   loadIntervalMin: integer("load_interval_min").default(90),
   blockCapacityHint: integer("block_capacity_hint").default(8),
+  maxParticipants: integer("max_participants").default(4),
+  minSkillLevel: integer("min_skill_level").default(0), // minimum jump count required
+  drills: jsonb("drills").$type<string[]>().default([]),
+  comments: text("comments"),
 });
 
 // Attendance requests table

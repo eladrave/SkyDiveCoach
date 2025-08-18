@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Calendar, CalendarCheck, Users } from "lucide-react";
+import { Calendar, CalendarCheck, Users, ChevronRight } from "lucide-react";
+import SessionDetailModal from "../session-detail-modal";
 
 interface Session {
   assignment: any;
@@ -12,6 +14,8 @@ interface UpcomingSessionsProps {
 }
 
 export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", { 
@@ -59,8 +63,9 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
             {sessions.map((session, index) => (
               <div
                 key={`${session.assignment?.id}-${index}`}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
                 data-testid={`session-${session.assignment?.id || index}`}
+                onClick={() => setSelectedSessionId(session.sessionBlock?.id)}
               >
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
@@ -97,12 +102,20 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
                       <AvatarFallback className="text-xs">M</AvatarFallback>
                     </Avatar>
                   </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
                 </div>
               </div>
             ))}
           </div>
         )}
       </CardContent>
+      
+      {/* Session Detail Modal */}
+      <SessionDetailModal
+        sessionId={selectedSessionId}
+        isOpen={!!selectedSessionId}
+        onClose={() => setSelectedSessionId(null)}
+      />
     </Card>
   );
 }

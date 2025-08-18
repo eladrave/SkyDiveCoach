@@ -315,6 +315,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/session-blocks/:id", authenticateToken, async (req, res) => {
+    try {
+      const sessionBlock = await storage.getSessionBlockWithParticipants(req.params.id);
+      if (!sessionBlock) {
+        return res.status(404).json({ message: "Session block not found" });
+      }
+      res.json(sessionBlock);
+    } catch (error) {
+      console.error("Get session block error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.delete("/api/session-blocks/:id", authenticateToken, requireRole(["mentor", "admin"]), async (req: AuthRequest, res) => {
     try {
       // Check if the session block belongs to the mentor
