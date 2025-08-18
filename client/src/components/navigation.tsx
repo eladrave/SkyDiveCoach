@@ -19,7 +19,8 @@ import {
   LogOut,
   GraduationCap,
   UserCheck,
-  Shield
+  Shield,
+  Plane
 } from "lucide-react";
 
 export default function Navigation() {
@@ -45,6 +46,12 @@ export default function Navigation() {
       name: "Progression",
       href: "/progression",
       icon: BookOpen,
+      roles: ["mentee", "mentor"]
+    },
+    {
+      name: "Jump Logs",
+      href: "/jump-logs",
+      icon: Plane,
       roles: ["mentee", "mentor"]
     },
     {

@@ -11,6 +11,7 @@ import SessionManagement from "@/pages/session-management";
 import MenteeSessions from "@/pages/mentee-sessions";
 import Progression from "@/pages/progression";
 import UserManagement from "@/pages/users";
+import JumpLogs from "@/pages/jump-logs";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/sessions" component={SessionManagement} />
       <Route path="/mentee-sessions" component={MenteeSessions} />
       <Route path="/progression" component={Progression} />
+      <Route path="/jump-logs" component={JumpLogs} />
       <Route path="/users" component={UserManagement} />
       <Route component={NotFound} />
     </Switch>

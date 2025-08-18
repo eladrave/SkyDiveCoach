@@ -741,6 +741,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Jump Logs routes
+  app.get("/api/jump-logs", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      let jumpLogs;
+      if (req.user!.role === "mentor") {
+        // Mentors can see all jump logs
+        jumpLogs = await storage.getAllJumpLogs();
+      } else if (req.user!.role === "mentee") {
+        // Mentees can only see their own jump logs
+        jumpLogs = await storage.getJumpLogsByMenteeId(req.user!.id);
+      } else if (req.user!.role === "admin") {
+        // Admins can see all jump logs
+        jumpLogs = await storage.getAllJumpLogs();
+      }
+      res.json(jumpLogs || []);
+    } catch (error) {
+      console.error("Get jump logs error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/jump-logs/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const jumpLog = await storage.getJumpLogById(req.params.id);
+      if (!jumpLog) {
+        return res.status(404).json({ message: "Jump log not found" });
+      }
+      
+      // Check permissions
+      if (req.user!.role === "mentee" && jumpLog.menteeId !== req.user!.id) {
+        return res.status(403).json({ message: "Insufficient permissions" });
+      }
+      
+      res.json(jumpLog);
+    } catch (error) {
+      console.error("Get jump log error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/jump-logs", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      // Only mentees can create their own jump logs, or mentors can create for mentees
+      if (req.user!.role !== "mentee" && req.user!.role !== "mentor") {
+        return res.status(403).json({ message: "Only mentees and mentors can create jump logs" });
+      }
+
+      const jumpLogData = {
+        ...req.body,
+        menteeId: req.user!.role === "mentee" ? req.user!.id : req.body.menteeId,
+        mentorId: req.user!.role === "mentor" ? req.user!.id : req.body.mentorId,
+      };
+
+      const jumpLog = await storage.createJumpLog(jumpLogData);
+      res.json(jumpLog);
+    } catch (error) {
+      console.error("Create jump log error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/jump-logs/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const existingJumpLog = await storage.getJumpLogById(req.params.id);
+      if (!existingJumpLog) {
+        return res.status(404).json({ message: "Jump log not found" });
+      }
+
+      // Check permissions
+      if (req.user!.role === "mentee" && existingJumpLog.menteeId !== req.user!.id) {
+        return res.status(403).json({ message: "You can only edit your own jump logs" });
+      }
+
+      const jumpLog = await storage.updateJumpLog(req.params.id, req.body);
+      res.json(jumpLog);
+    } catch (error) {
+      console.error("Update jump log error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/jump-logs/:id", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const existingJumpLog = await storage.getJumpLogById(req.params.id);
+      if (!existingJumpLog) {
+        return res.status(404).json({ message: "Jump log not found" });
+      }
+
+      // Check permissions
+      if (req.user!.role === "mentee" && existingJumpLog.menteeId !== req.user!.id) {
+        return res.status(403).json({ message: "You can only delete your own jump logs" });
+      }
+
+      await storage.deleteJumpLog(req.params.id);
+      res.json({ message: "Jump log deleted successfully" });
+    } catch (error) {
+      console.error("Delete jump log error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
